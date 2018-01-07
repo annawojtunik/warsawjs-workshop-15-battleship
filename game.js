@@ -40,7 +40,7 @@ class BoardComponent extends Component {
           location: { row: rowNumber, column: columnNumber }
         });
         rowElement.appendChild(cell.getElement());
-      //save a reference to the cell so that it can be addressed later
+        //save a reference to the cell so that it can be addressed later
         this._cells[`${rowNumber}x${columnNumber}`] = cell;
       }
     this._element.appendChild(rowElement);
@@ -54,12 +54,47 @@ class BoardComponent extends Component {
   }
 }
 
+//Game controller
+
 class GameController {
-  constructor(board) {
-    this._board = board;
+  constructor(model) {
+    this._model = model;
   }
   handleCellClick({ location }) {
-    this._board.setCellState(location, "miss");
+    this._model.fireAt(location);
+  }
+}
+
+// Models
+
+class CellModel {
+  constructor({ hasShip }) {
+    this._hasShip = hasShip;
+    this._fireAt = false;
+  }
+
+  fire() {
+    //guard clause
+    if (this._fireAt) {
+      return undefined;
+    }
+    this._fireAt = true;
+    return (this._hasShip ? "hit" : "miss");
+  }
+}
+
+class BoardModel {
+  constructor({ size = 8 } = {}) {
+    this._cells = {};
+    for (let i = 0; i < size; i += 1) {
+      for (let j = 0; j < size; j += 1) {
+        this._cells[`${i}x${j}`] = new CellModel({ hasShip: false });
+      }
+    }
+  }
+  fireAt(location) {
+    const target = this._cells[`${location.row}x${location.column}`];
+    const firingResult = target.fire();
   }
 }
 
@@ -68,7 +103,9 @@ function handleCellClick(...args) {
   myController.handleCellClick.apply(myController, args);
 }
 
-const board = new BoardComponent({ handleCellClick })
-myController = new GameController(board);
+const boardView = new BoardComponent({ handleCellClick });
+const boardModel = new BoardModel({ handleCellClick });
+myController = new GameController(boardModel);
 
-const boardContainer = document.getElementById("boardContainer").appendChild(board.getElement());
+const boardContainer = document.getElementById("boardContainer");
+boardContainer.appendChild(boardView.getElement());
