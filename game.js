@@ -54,7 +54,7 @@ class BoardComponent extends Component {
   }
 }
 
-//Game controller
+// Game controller
 
 class GameController {
   constructor(model) {
@@ -88,13 +88,40 @@ class BoardModel {
     this._cells = {};
     for (let i = 0; i < size; i += 1) {
       for (let j = 0; j < size; j += 1) {
-        this._cells[`${i}x${j}`] = new CellModel({ hasShip: false });
+        let hasShip;
+        if (Math.random() < 0.2) {
+          hasShip = true;
+        } else {
+          hasShip = false;
+        }
+        this._cells[`${i}x${j}`] = new CellModel({ hasShip: hasShip });
       }
     }
+    //initialize an empty observer map:
+    this._observers = {};
   }
+
   fireAt(location) {
     const target = this._cells[`${location.row}x${location.column}`];
     const firingResult = target.fire();
+    if (firingResult) {
+      this._notifyObservers("firedAt", { location, firingResult });
+    }
+  }
+
+  _notifyObservers(type, data) {
+    //run all saved obbservers for given type
+    (this._observers[type] || []).forEach(function(observer) {
+      observer(data);
+    });
+  }
+
+  addObserver(type, observerFunction) {
+    //save the observer function for running later
+    if (!this._observers[type]) {
+      this._observers[type] = [];
+    }
+    this._observers[type].push(observerFunction);
   }
 }
 
@@ -106,6 +133,9 @@ function handleCellClick(...args) {
 const boardView = new BoardComponent({ handleCellClick });
 const boardModel = new BoardModel({ handleCellClick });
 myController = new GameController(boardModel);
+boardModel.addObserver("firedAt", function({ location, firingResult }) {
+  boardView.setCellState(location, firingResult);
+});
 
 const boardContainer = document.getElementById("boardContainer");
 boardContainer.appendChild(boardView.getElement());
